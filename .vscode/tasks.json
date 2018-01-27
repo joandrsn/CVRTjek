@@ -1,0 +1,16 @@
+{
+    "version": "2.0.0",
+    "tasks": [
+        {
+            "label": "Zip",
+            "type": "shell",
+            "group": {
+                "kind": "build",
+                "isDefault": true
+            },
+            "windows": {
+                "command": "Remove-Item cvrapi.zip;Compress-Archive * cvrapi.zip"  
+            }
+        }
+    ]
+}
