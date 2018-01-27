@@ -1,42 +1,71 @@
 function modulus11check (cvrnumber) 
 {
-  var weight = [2, 7, 6, 5, 4, 3, 2];
-  var number = 0;
-  for (var i = weight.length - 1; i >= 0; i--) 
-  {
-    number += parseInt(cvrnumber[i]) * weight[i];
-  }
-  return (11 - number % 11) === parseInt(cvrnumber[7]);
+  let sum = 0;
+
+  sum += cvrnumber[0] * 2;
+  sum += cvrnumber[1] * 7;
+  sum += cvrnumber[2] * 6;
+  sum += cvrnumber[3] * 5;
+  sum += cvrnumber[4] * 4;
+  sum += cvrnumber[5] * 3;
+  sum += cvrnumber[6] * 2;
+
+  let remainder = sum % 11;
+  let last = remainder != 0 ? 11 - remainder : 0;
+  return last == cvrnumber[7];
 }
 
-var regex = /[^0-9]*/g;
+let regex = /[^0-9]*/g;
 
 function searchCVR (info)
 {
-  var cvrnumber = info.selectionText.replace(regex, '');
+  let cvrnumber = info.selectionText.replace(regex, '');
 
-  console.log(cvrnumber);
+  console.log("Input: " + cvrnumber);
+  console.log("Input length: " + cvrnumber.length);
 
-  if(cvrnumber.length != 8)
-    return writeError("Legth less that 8");
+  if (cvrnumber.length < 8) {
+    return writeError("Length less that 8");
+  }
+  else if (cvrnumber.length === 8) {
+    if (!modulus11check(cvrnumber))
+      return writeError("Failed modulus11check");
+  }
+  else {
+    let max = cvrnumber.length - 8 + 1;
+    let found = false;
+    let i = 0;
+    while(!found && i < max) {
+      let currentcvr = cvrnumber.substring(i, i + 8);
+      console.log("Currently checking: " + currentcvr);
+      if (modulus11check(currentcvr)) {
+        found = true;
+        cvrnumber = currentcvr;
+        console.log("CVRnumber " + cvrnumber +  " matches modulus11check!");
+      }
+      i++;
+    }
+    if (!found)
+      return writeError("Failed modulus11check (search)");
+  }
+  
+  let slug = getSlug(cvrnumber);
+}
 
-  if(!modulus11check(cvrnumber))
-    return writeError("Failed modulus11check");
-
-  var request = new XMLHttpRequest();
+function getSlug (cvrnumber) {
+  let request = new XMLHttpRequest();
 
   request.open('GET', 'https://cvrapi.dk/api?country=dk&slug=1&search=' + cvrnumber, true);
   request.onload = function() 
   {
     if (request.status >= 200 && request.status < 400) 
     {
-      console.log("Success!");
+      console.log("Got slug!");
 
-      var data = JSON.parse(request.responseText);
+      let data = JSON.parse(request.responseText);
       console.log(data);
 
-      var urlString = "https://cvrapi.dk/virksomhed/dk/" + data.slug + "/" + data.vat;
-      window.open(urlString);
+      opencvrapi(data);
     } 
     else 
     {
@@ -49,12 +78,15 @@ function searchCVR (info)
   request.send();
 }
 
+function opencvrapi (data) {
+  let urlString = "https://cvrapi.dk/virksomhed/dk/" + data.slug + "/" + data.vat;
+  window.open(urlString);
+}
+
 function writeError (errorString)
 {
   console.error("Not valid CVR number! " + errorString);
 }
-
-
 
 chrome.contextMenus.create({
   contexts: ["selection"],
