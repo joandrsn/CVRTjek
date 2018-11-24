@@ -1,5 +1,74 @@
-function modulus11check (cvrnumber) 
-{
+let BASE_URL = "https://cvrapi.dk";
+let regex = /[^0-9]*/g;
+
+function searchCVR(info) {
+  let selectedtext = info.selectionText;
+  let numbersearchText = selectedtext.replace(regex, '');
+  if (numbersearchText.length === 8 && modulus11check(numbersearchText)) {
+    getSlugPromise(numbersearchText, true)
+      .then(data => opencvrapi(data))
+      .catch(err => {
+        console.log(err);
+        trySearchString(selectedtext)
+      });
+  } else {
+    trySearchString(selectedtext);
+  }
+}
+
+function trySearchString(searchterm) {
+  console.log("searchString. Length: " + searchterm.length + " Text: " + searchterm);
+  if (searchterm.length > 5) {
+    getSlugPromise(searchterm, false)
+      .then(data => opencvrapi(data))
+      .catch(err => {
+        console.log(err)
+        tryModulus11(searchterm)
+      });
+  } else {
+    tryModulus11(searchterm)
+  }
+}
+
+function tryModulus11(searchterm) {
+
+  let numbersearchText = searchterm.replace(regex, '');
+  let candidates = searchForModulus11Number(numbersearchText);
+  console.log("Found " + candidates.length + " candidates:" + candidates);
+  tryNextMod11(candidates);
+}
+
+function tryNextMod11(candidates) {
+  if (candidates.length === 0) {
+    return;
+  }
+  let currentcandidate = candidates.shift();
+  getSlugPromise(currentcandidate, true)
+    .then(opencvrapi)
+    .catch(err => {
+      console.log(err);
+      tryNextMod11(candidates)
+    });
+}
+
+function searchForModulus11Number(allnumbers) {
+  let candidates = [];
+  let max = allnumbers.length - 8 + 1;
+  let found = false;
+  let i = 0;
+  while (!found && i < max) {
+    let currentcvr = allnumbers.substring(i, i + 8);
+    console.log("Currently checking: " + currentcvr);
+    if (modulus11check(currentcvr)) {
+      candidates.push(currentcvr);
+    }
+    i++;
+  }
+  console.log("Modolus11-matching numbers:" + candidates);
+  return candidates;
+}
+
+function modulus11check(cvrnumber) {
   let sum = 0;
 
   sum += cvrnumber[0] * 2;
@@ -15,81 +84,44 @@ function modulus11check (cvrnumber)
   return last == cvrnumber[7];
 }
 
-let regex = /[^0-9]*/g;
+function getSlugPromise(cvrnumber, vat) {
+  return new Promise((resolve, reject) => {
+    console.log("IsVAT: " + vat + " Query: " + cvrnumber);
+    let term = vat ? 'vat' : 'search';
+    let url = BASE_URL + '/api?country=dk&slug=1&' + term + '=' + cvrnumber;
+    console.log("url:" + url);
 
-function searchCVR (info)
-{
-  let cvrnumber = info.selectionText.replace(regex, '');
-
-  console.log("Input: " + cvrnumber);
-  console.log("Input length: " + cvrnumber.length);
-
-  if (cvrnumber.length < 8) {
-    return writeError("Length less that 8");
-  }
-  else if (cvrnumber.length === 8) {
-    if (!modulus11check(cvrnumber))
-      return writeError("Failed modulus11check");
-  }
-  else {
-    let max = cvrnumber.length - 8 + 1;
-    let found = false;
-    let i = 0;
-    while(!found && i < max) {
-      let currentcvr = cvrnumber.substring(i, i + 8);
-      console.log("Currently checking: " + currentcvr);
-      if (modulus11check(currentcvr)) {
-        found = true;
-        cvrnumber = currentcvr;
-        console.log("CVRnumber " + cvrnumber +  " matches modulus11check!");
+    let request = new XMLHttpRequest();
+    request.open('GET', url, true);
+    request.onload = () => {
+      if (request.status >= 200 && request.status < 400) {
+        let data = JSON.parse(request.responseText);
+        if (data && data.slug && data.vat) {
+          resolve({ "slug": data.slug, "vat": data.vat });
+        } else {
+          reject("Invalid data.");
+        }
+      } else {
+        reject("Wrong status code.");
       }
-      i++;
     }
-    if (!found)
-      return writeError("Failed modulus11check (search)");
+    request.onerror = () => { reject("wtf") };
+    request.send();
   }
-  
-  let slug = getSlug(cvrnumber);
-}
+  );
+};
 
-function getSlug (cvrnumber) {
-  let request = new XMLHttpRequest();
-
-  request.open('GET', 'https://cvrapi.dk/api?country=dk&slug=1&search=' + cvrnumber, true);
-  request.onload = function() 
-  {
-    if (request.status >= 200 && request.status < 400) 
-    {
-      console.log("Got slug!");
-
-      let data = JSON.parse(request.responseText);
-      console.log(data);
-
-      opencvrapi(data);
-    } 
-    else 
-    {
-      console.error("Wrong status code");
-    }
-  }
-  request.onerror = function() {
-    console.error("There was an error.");
-  }
-  request.send();
-}
-
-function opencvrapi (data) {
-  let urlString = "https://cvrapi.dk/virksomhed/dk/" + data.slug + "/" + data.vat;
+function opencvrapi(data) {
+  let urlString = BASE_URL + "/virksomhed/dk/" + data.slug + "/" + data.vat;
   window.open(urlString);
 }
 
-function writeError (errorString)
-{
+function writeError(errorString) {
   console.error("Not valid CVR number! " + errorString);
 }
 
 chrome.contextMenus.create({
   contexts: ["selection"],
   title: "Søg efter '%s' på CVR API",
-  onclick : searchCVR
+  onclick: searchCVR
 });
