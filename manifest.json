@@ -1,7 +1,7 @@
 {
   "manifest_version": 2,
   "name": "CVRTjek",
-  "version": "0.0.2.0",
+  "version": "0.0.2.1",
   "description": "Søg efter CVR oplysninger med CVRTjek",
   "icons": {
     "1024": "Icons/logo_cvrtjek.png"
@@ -15,6 +15,8 @@
     "default_icon": "Icons/logo_cvrtjek.png"
   },
   "permissions": [
-    "contextMenus"
+    "contextMenus",
+    "cookies",
+    "*://app.cvrtjek.dk/"
   ]
 }

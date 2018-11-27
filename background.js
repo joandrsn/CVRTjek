@@ -1,14 +1,18 @@
 let BASE_URL = "https://cvrapi.dk";
-let regex = /[^0-9]*/g;
+let LICENSE_URL = "https://app.cvrtjek.dk"
+let NUMBER_REGEX = /[^0-9]*/g;
+let MINSEARCH_LENGTH = 4;
+let DEBUG = false;
 
 function searchCVR(info) {
   let selectedtext = info.selectionText;
-  let numbersearchText = selectedtext.replace(regex, '');
+  log(`Begging search for the term: "${selectedtext}"`)
+  let numbersearchText = selectedtext.replace(NUMBER_REGEX, '');
   if (numbersearchText.length === 8 && modulus11check(numbersearchText)) {
     getSlugPromise(numbersearchText, true)
       .then(data => opencvrapi(data))
       .catch(err => {
-        console.log(err);
+        log(err);
         trySearchString(selectedtext)
       });
   } else {
@@ -17,12 +21,12 @@ function searchCVR(info) {
 }
 
 function trySearchString(searchterm) {
-  console.log("searchString. Length: " + searchterm.length + " Text: " + searchterm);
-  if (searchterm.length > 5) {
+  log(`searchString. Length: ${searchterm.length} Text: ${searchterm}`);
+  if (searchterm.length > MINSEARCH_LENGTH) {
     getSlugPromise(searchterm, false)
       .then(data => opencvrapi(data))
       .catch(err => {
-        console.log(err)
+        log(err)
         tryModulus11(searchterm)
       });
   } else {
@@ -32,21 +36,22 @@ function trySearchString(searchterm) {
 
 function tryModulus11(searchterm) {
 
-  let numbersearchText = searchterm.replace(regex, '');
+  let numbersearchText = searchterm.replace(NUMBER_REGEX, '');
   let candidates = searchForModulus11Number(numbersearchText);
-  console.log("Found " + candidates.length + " candidates:" + candidates);
+  log(`Found ${candidates.length} candidates: ${candidates}`);
   tryNextMod11(candidates);
 }
 
 function tryNextMod11(candidates) {
   if (candidates.length === 0) {
+    log("Nothing found.");
     return;
   }
   let currentcandidate = candidates.shift();
   getSlugPromise(currentcandidate, true)
     .then(opencvrapi)
     .catch(err => {
-      console.log(err);
+      log(err);
       tryNextMod11(candidates)
     });
 }
@@ -58,13 +63,13 @@ function searchForModulus11Number(allnumbers) {
   let i = 0;
   while (!found && i < max) {
     let currentcvr = allnumbers.substring(i, i + 8);
-    console.log("Currently checking: " + currentcvr);
+    log(`Currently checking: ${currentcvr}`);
     if (modulus11check(currentcvr)) {
       candidates.push(currentcvr);
     }
     i++;
   }
-  console.log("Modolus11-matching numbers:" + candidates);
+  log(`Modolus11-matching numbers: ${candidates}`);
   return candidates;
 }
 
@@ -84,20 +89,22 @@ function modulus11check(cvrnumber) {
   return last == cvrnumber[7];
 }
 
-function getSlugPromise(cvrnumber, vat) {
-  return new Promise((resolve, reject) => {
-    console.log("IsVAT: " + vat + " Query: " + cvrnumber);
-    let term = vat ? 'vat' : 'search';
-    let url = BASE_URL + '/api?country=dk&slug=1&' + term + '=' + cvrnumber;
-    console.log("url:" + url);
+function getSlugPromise(query, vat) {
+  log("IsVAT: " + vat + " Query: " + query);
+  let term = vat ? 'vat' : 'search';
+  let url = `${BASE_URL}/api?country=dk&slug=1&${term}=${query}`;
+  return makeAJAXPromise(url);
+};
 
+function makeAJAXPromise(url) {
+  return new Promise((resolve, reject) => {
     let request = new XMLHttpRequest();
     request.open('GET', url, true);
     request.onload = () => {
       if (request.status >= 200 && request.status < 400) {
         let data = JSON.parse(request.responseText);
-        if (data && data.slug && data.vat) {
-          resolve({ "slug": data.slug, "vat": data.vat });
+        if (data) {
+          resolve(data);
         } else {
           reject("Invalid data.");
         }
@@ -107,17 +114,32 @@ function getSlugPromise(cvrnumber, vat) {
     }
     request.onerror = () => { reject("wtf") };
     request.send();
-  }
-  );
-};
-
-function opencvrapi(data) {
-  let urlString = BASE_URL + "/virksomhed/dk/" + data.slug + "/" + data.vat;
-  window.open(urlString);
+  });
 }
 
-function writeError(errorString) {
-  console.error("Not valid CVR number! " + errorString);
+function opencvrapi(data) {
+  hasCookiePromise(data).then((islicensed) => openCVRwindow(islicensed))
+}
+
+function openCVRwindow(data){
+  let base = data['licensed'] === true ? LICENSE_URL : BASE_URL;
+  let urlString = base + "/virksomhed/dk/" + data.slug + "/" + data.vat;
+  window.open(urlString); 
+}
+
+function hasCookiePromise(data) {
+  return new Promise((resolve, reject) => {
+    chrome.cookies.get({url: "https://app.cvrtjek.dk", name: "cvrtjek_app"}, (cookie) => {
+      data['licensed'] = cookie != null;
+      resolve(data);
+    })    
+  });
+}
+
+function log(logmsg) {
+  if (DEBUG) {
+    console.log(logmsg);
+  }
 }
 
 chrome.contextMenus.create({
