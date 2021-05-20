@@ -1,12 +1,13 @@
-let BASE_URL = "https://cvrapi.dk";
-let LICENSE_URL = "https://app.cvrtjek.dk"
+import { tabs, cookies, menus, i18n } from "webextension-polyfill";
+import { lookupCVR, BASE_URL, LICENSE_URL } from "./http";
+
 let NUMBER_REGEX = /[^0-9]*/g;
 let MINSEARCH_LENGTH = 4;
 let DEBUG = false;
 
 function searchCVR(info) {
   let selectedtext = info.selectionText;
-  log(`Begging search for the term: "${selectedtext}"`)
+  log(`Beginning search for the term: "${selectedtext}"`)
   let numbersearchText = selectedtext.replace(NUMBER_REGEX, '');
   if (numbersearchText.length === 8 && modulus11check(numbersearchText)) {
     getSlugPromise(numbersearchText, true)
@@ -48,6 +49,7 @@ function tryNextMod11(candidates) {
     return;
   }
   let currentcandidate = candidates.shift();
+
   getSlugPromise(currentcandidate, true)
     .then(opencvrapi)
     .catch(err => {
@@ -91,48 +93,28 @@ function modulus11check(cvrnumber) {
 
 function getSlugPromise(query, vat) {
   log("IsVAT: " + vat + " Query: " + query);
-  let term = vat ? 'vat' : 'search';
-  let url = `${BASE_URL}/api?country=dk&slug=1&${term}=${query}`;
-  return makeAJAXPromise(url);
+  let params = vat ? { 'vat': query } : { 'search': query };
+  return lookupCVR(params);
 };
 
-function makeAJAXPromise(url) {
-  return new Promise((resolve, reject) => {
-    let request = new XMLHttpRequest();
-    request.open('GET', url, true);
-    request.onload = () => {
-      if (request.status >= 200 && request.status < 400) {
-        let data = JSON.parse(request.responseText);
-        if (data) {
-          resolve(data);
-        } else {
-          reject("Invalid data.");
-        }
-      } else {
-        reject("Wrong status code.");
-      }
-    }
-    request.onerror = () => { reject("wtf") };
-    request.send();
-  });
-}
-
 function opencvrapi(data) {
+  console.log(data);
   hasCookiePromise(data).then((islicensed) => openCVRwindow(islicensed))
 }
 
-function openCVRwindow(data){
+function openCVRwindow(data) {
   let base = data['licensed'] === true ? LICENSE_URL : BASE_URL;
   let urlString = base + "/virksomhed/dk/" + data.slug + "/" + data.vat;
-  window.open(urlString); 
+  Promise.resolve(tabs.create({ url: urlString }));
+
 }
 
 function hasCookiePromise(data) {
-  return new Promise((resolve, reject) => {
-    chrome.cookies.get({url: "https://app.cvrtjek.dk", name: "cvrtjek_app"}, (cookie) => {
+  return new Promise((resolve, _) => {
+    cookies.get({ url: "https://app.cvrtjek.dk", name: "cvrtjek_app" }, (cookie) => {
       data['licensed'] = cookie != null;
       resolve(data);
-    })    
+    })
   });
 }
 
@@ -142,8 +124,8 @@ function log(logmsg) {
   }
 }
 
-chrome.contextMenus.create({
+menus.create({
   contexts: ["selection"],
-  title: "Søg efter '%s' på CVR API",
+  title: i18n.getMessage("searchDescription"),
   onclick: searchCVR
 });

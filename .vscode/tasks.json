@@ -14,6 +14,18 @@
             "osx": {
                 "command": "rm cvrapi.zip;zip -r cvrapi.zip -r . --exclude '.git/*' '.gitignore' 'ignore' '.DS_Store' '.vscode/*'"
             }
+        },
+        {
+            "label": "Build development",
+            "type": "shell",
+            "group": "build",
+            "command": "npm run webpack"
+        },
+        {
+            "label": "Build production",
+            "type": "shell",
+            "group": "build",
+            "command": "npm run publish"
         }
     ]
 }

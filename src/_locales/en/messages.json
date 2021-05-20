@@ -1,0 +1,6 @@
+{
+  "searchDescription": {
+    "message": "Search for '%s' on CVR API",
+    "description": "Caption for the context menu (right click)"
+  }
+}

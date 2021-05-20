@@ -4,7 +4,7 @@
   "version": "0.0.2.1",
   "description": "Søg efter CVR oplysninger med CVRTjek",
   "icons": {
-    "1024": "Icons/logo_cvrtjek.png"
+    "1024": "icons/logo_cvrtjek.png"
   },
   "background": {
     "scripts": [
@@ -12,11 +12,12 @@
     ]
   },
   "page_action": {
-    "default_icon": "Icons/logo_cvrtjek.png"
+    "default_icon": "icons/logo_cvrtjek.png"
   },
   "permissions": [
-    "contextMenus",
+    "menus",
     "cookies",
     "*://app.cvrtjek.dk/"
-  ]
+  ],
+  "default_locale": "en"
 }

@@ -1,0 +1,13 @@
+{
+  "devDependencies": {
+    "axios": "^0.21.1",
+    "copy-webpack-plugin": "^8.1.1",
+    "webextension-polyfill": "^0.8.0",
+    "webpack": "^5.37.1",
+    "webpack-cli": "^4.7.0"
+  },
+  "scripts": {
+    "publish": "webpack --mode production --name prod",
+    "webpack": "webpack --mode development --name debug"
+  }
+}
