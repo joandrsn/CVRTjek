@@ -3,7 +3,7 @@ import { lookupCVR, BASE_URL, LICENSE_URL } from "./http";
 
 let NUMBER_REGEX = /[^0-9]*/g;
 let MINSEARCH_LENGTH = 4;
-let DEBUG = false;
+let DEBUG = true;
 
 function searchCVR(info) {
   let selectedtext = info.selectionText;
@@ -19,6 +19,18 @@ function searchCVR(info) {
   } else {
     trySearchString(selectedtext);
   }
+}
+
+function searchByCVRNo(input) {
+  if (input.length !== 8 || !modulus11check(input)) {
+    return false;
+  }
+  getSlugPromise(input, true)
+  .then(data => opencvrapi(data))
+  .catch(err => {
+    log(err);
+    return false;
+  });
 }
 
 function trySearchString(searchterm) {
@@ -38,7 +50,7 @@ function trySearchString(searchterm) {
 function tryModulus11(searchterm) {
 
   let numbersearchText = searchterm.replace(NUMBER_REGEX, '');
-  let candidates = searchForModulus11Number(numbersearchText);
+  let candidates = getMod11Candidates(numbersearchText);
   log(`Found ${candidates.length} candidates: ${candidates}`);
   tryNextMod11(candidates);
 }
@@ -58,12 +70,11 @@ function tryNextMod11(candidates) {
     });
 }
 
-function searchForModulus11Number(allnumbers) {
+function getMod11Candidates(allnumbers) {
   let candidates = [];
   let max = allnumbers.length - 8 + 1;
-  let found = false;
   let i = 0;
-  while (!found && i < max) {
+  while (i < max) {
     let currentcvr = allnumbers.substring(i, i + 8);
     log(`Currently checking: ${currentcvr}`);
     if (modulus11check(currentcvr)) {
@@ -104,14 +115,14 @@ function opencvrapi(data) {
 
 function openCVRwindow(data) {
   let base = data['licensed'] === true ? LICENSE_URL : BASE_URL;
-  let urlString = base + "/virksomhed/dk/" + data.slug + "/" + data.vat;
+  let urlString = `${base}/virksomhed/dk/${data.slug}/${data.vat}`;
   Promise.resolve(tabs.create({ url: urlString }));
 
 }
 
 function hasCookiePromise(data) {
   return new Promise((resolve, _) => {
-    cookies.get({ url: "https://app.cvrtjek.dk", name: "cvrtjek_app" }, (cookie) => {
+    cookies.get({ url: "https://app.cvrtjek.dk", name: "cvrtjek_app" }).then((cookie) => {
       data['licensed'] = cookie != null;
       resolve(data);
     })
@@ -127,5 +138,5 @@ function log(logmsg) {
 menus.create({
   contexts: ["selection"],
   title: i18n.getMessage("searchDescription"),
-  onclick: searchCVR
+  onclick: searchCVR,
 });
