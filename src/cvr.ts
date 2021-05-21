@@ -42,6 +42,7 @@ export function searchByAllNumbers(allnumbers: string): Promise<SearchResult> {
         let res = await searchByVATNo(currentcandidate);
         if (res.result in [ResultOption.MATCH, ResultOption.QUOTA_EXCEEDED]) {
           resolve(res);
+          return;
         }
       }
       allnumbers = allnumbers.substring(1);

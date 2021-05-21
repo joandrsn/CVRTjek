@@ -22,7 +22,7 @@ export function lookupCVR(inputparams: VATQuery | SearchQuery): Promise<SearchRe
           }
         }
       ).catch(err => {
-        if (err.status === 404) {
+        if (err.response.status === 404) {
           resolve({ data: err.data, result: ResultOption.NOT_FOUND });
         } else {
           log(err);
