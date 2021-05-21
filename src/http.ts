@@ -1,6 +1,7 @@
-import { get } from "axios";
+import get from "axios";
+import { SearchQuery, VATQuery } from "./types";
 
-export function lookupCVR(inputparams) {
+export function lookupCVR(inputparams: VATQuery | SearchQuery) {
   return new Promise((resolve, reject) => {
     let parameters = {
       country: 'dk',
@@ -9,8 +10,12 @@ export function lookupCVR(inputparams) {
     };
     get(API_URL, { params: parameters }).then(
       res => {
+        console.log(res);
         if (res.status != 200) {
-          reject(res.data);
+          reject("not found");
+        }
+        if (res.data.error === "QUOTA_EXCEEDED") {
+          reject("QUOTA_EXCEEDED");
         } else {
           resolve(res.data);
         }

@@ -4,16 +4,13 @@
         {
             "label": "Zip",
             "type": "shell",
-            "group": {
-                "kind": "build",
-                "isDefault": true
-            },
             "windows": {
                 "command": "Remove-Item cvrapi.zip;Compress-Archive * cvrapi.zip"  
             },
             "osx": {
                 "command": "rm cvrapi.zip;zip -r cvrapi.zip -r . --exclude '.git/*' '.gitignore' 'ignore' '.DS_Store' '.vscode/*'"
-            }
+            },
+            "command": "echo hello"
         },
         {
             "label": "Build development",
