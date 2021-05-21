@@ -1,5 +1,6 @@
 import { browser } from "webextension-polyfill-ts";
 import { lookupCVR, BASE_URL, LICENSE_URL } from "./http";
+import { SearchResult } from "./types";
 
 const DEBUG = true;
 
@@ -19,10 +20,11 @@ export function modulus11check(cvrnumber: string) {
   return last === parseInt(cvrnumber[7]);
 }
 
-export function getSlugPromise(query: string, vat: boolean) {
-  log("IsVAT: " + vat + " Query: " + query);
-  let params = vat ? { 'vat': query } : { 'search': query };
-  return lookupCVR(params);
+export function searchByVATNo(query: string): Promise<SearchResult> {
+  return lookupCVR({ 'vat': query });
+};
+export function searchByName(query: string): Promise<SearchResult> {
+  return lookupCVR({ 'search': query });
 };
 
 export async function openCVRwindow(data: any) {

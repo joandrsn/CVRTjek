@@ -6,6 +6,7 @@ const DESTFOLDER = path.resolve(__dirname, 'dist');
 
 module.exports = [{
   entry: './src/background.ts',
+  devtool: 'inline-source-map',
   module: {
     rules: [
       {

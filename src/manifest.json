@@ -15,7 +15,7 @@
     "default_icon": "icons/logo_cvrtjek.png"
   },
   "permissions": [
-    "menus",
+    "contextMenus",
     "cookies",
     "*://app.cvrtjek.dk/"
   ],
